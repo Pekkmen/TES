@@ -1,9 +1,11 @@
 #include "raylib.h"
+#define RAYGUI_IMPLEMENTATION
+#include "src/raygui.h"
 
 //------------------------------------------------------------------------------------------
 // Types and Structures Definition
 //------------------------------------------------------------------------------------------
-typedef enum GameScreen { LOGO = 0, TITLE, GAMEPLAY, ENDING } GameScreen;
+typedef enum GameScreen {TITLE, GAMEPLAY, ENDING } GameScreen;
 
 //------------------------------------------------------------------------------------
 // Program main entry point
@@ -17,11 +19,9 @@ int main(void)
 
     InitWindow(screenWidth, screenHeight, "TES");
 
-    GameScreen currentScreen = LOGO;
+    GameScreen currentScreen = TITLE;
 
     // TODO: Initialize all required variables and load all required data here!
-
-    int framesCounter = 0;          // Useful to count frames
 
     SetTargetFPS(60);               // Set desired framerate (frames-per-second)
     //--------------------------------------------------------------------------------------
@@ -33,18 +33,6 @@ int main(void)
         //----------------------------------------------------------------------------------
         switch(currentScreen)
         {
-            case LOGO:
-            {
-                // TODO: Update LOGO screen variables here!
-
-                framesCounter++;    // Count frames
-
-                // Wait for 2 seconds (120 frames) before jumping to TITLE screen
-                if (framesCounter > 120)
-                {
-                    currentScreen = TITLE;
-                }
-            } break;
             case TITLE:
             {
                 // TODO: Update TITLE screen variables here!
@@ -87,13 +75,6 @@ int main(void)
 
             switch(currentScreen)
             {
-                case LOGO:
-                {
-                    // TODO: Draw LOGO screen here!
-                    DrawText("LOGO SCREEN", 20, 20, 40, LIGHTGRAY);
-                    DrawText("WAIT for 2 SECONDS...", 290, 220, 20, GRAY);
-
-                } break;
                 case TITLE:
                 {
                     // TODO: Draw TITLE screen here!
