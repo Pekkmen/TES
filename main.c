@@ -7,6 +7,8 @@
 //------------------------------------------------------------------------------------------
 typedef enum GameScreen {TITLE, GAMEPLAY, ENDING } GameScreen;
 
+void draw_level_buttons(Rectangle *, float, float);
+
 //------------------------------------------------------------------------------------
 // Program main entry point
 //------------------------------------------------------------------------------------
@@ -26,6 +28,9 @@ int main(void)
     SetTargetFPS(60);               // Set desired framerate (frames-per-second)
     //--------------------------------------------------------------------------------------
 
+    Rectangle level_buttons[5];
+    float level_buttons_width = 250.0f, level_buttons_height = 140.0f;
+
     // Main game loop
     while (!WindowShouldClose())    // Detect window close button or ESC key
     {
@@ -36,12 +41,11 @@ int main(void)
             case TITLE:
             {
                 // TODO: Update TITLE screen variables here!
-
-                // Press enter to change to GAMEPLAY screen
-                if (IsKeyPressed(KEY_ENTER) || IsGestureDetected(GESTURE_TAP))
-                {
-                    currentScreen = GAMEPLAY;
-                }
+                // // Press enter to change to GAMEPLAY screen
+                // if (IsKeyPressed(KEY_ENTER) || IsGestureDetected(GESTURE_TAP))
+                // {
+                //     currentScreen = GAMEPLAY;
+                // }
             } break;
             case GAMEPLAY:
             {
@@ -80,7 +84,7 @@ int main(void)
                     // TODO: Draw TITLE screen here!
                     DrawRectangle(0, 0, screenWidth, screenHeight, GREEN);
                     DrawText("TITLE SCREEN", 20, 20, 40, DARKGREEN);
-                    DrawText("PRESS ENTER or TAP to JUMP to GAMEPLAY SCREEN", 120, 220, 20, DARKGREEN);
+                    draw_level_buttons(level_buttons, level_buttons_width, level_buttons_height);
 
                 } break;
                 case GAMEPLAY:
@@ -115,4 +119,21 @@ int main(void)
     //--------------------------------------------------------------------------------------
 
     return 0;
+}
+
+void draw_level_buttons(Rectangle *level_buttons, float level_buttons_width, float level_buttons_height){
+    // GuiButton((Rectangle){.x = GetScreenWidth()/2 - level_buttons_width/2,
+    //                       .y = GetScreenHeight()/2 - level_buttons_height/2,
+    //                       .width = level_buttons_width,
+    //                       .height = level_buttons_height
+    // }, "1. pálya");
+    for(int i = 0 ; i < 5; i++){
+        level_buttons[i] = (Rectangle){
+            .x = GetScreenWidth()/2 - level_buttons_width/2,
+            .y = 100.0f + i*level_buttons_height,
+            .width = level_buttons_width,
+            .height = level_buttons_height
+        };
+        GuiButton(level_buttons[i], TextFormat("%d. pálya", i+1));
+    }
 }
