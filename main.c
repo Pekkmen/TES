@@ -7,7 +7,7 @@
 //------------------------------------------------------------------------------------------
 typedef enum GameScreen {TITLE, LEVEL_1, LEVEL_2, LEVEL_3, LEVEL_4, LEVEL_5, ENDING } GameScreen;
 
-void draw_level_buttons(GameScreen*, int);
+void draw_level_buttons(GameScreen*, int, bool *);
 bool draw_exit_button(GameScreen *);
 
 //------------------------------------------------------------------------------------
@@ -26,6 +26,7 @@ int main(void)
 
     // Count how many levels have been completed
     int level_completed = 0;
+    bool game_completed = false, levels[5] = {false};
 
     // TODO: Initialize all required variables and load all required data here!
 
@@ -45,23 +46,38 @@ int main(void)
             } break;
             case LEVEL_1:
             {
-
+                if(IsKeyPressed(KEY_K)){ 
+                    levels[0] = true;
+                    level_completed++;
+                }
             } break;
             case LEVEL_2:
             {
-
+                if(IsKeyPressed(KEY_K)){
+                    levels[1] = true;
+                    level_completed++;
+                }
             } break;
             case LEVEL_3:
             {
-
+                if(IsKeyPressed(KEY_K)){
+                    levels[2] = true;
+                    level_completed++;
+                }
             } break;
             case LEVEL_4:
             {
-
+                if(IsKeyPressed(KEY_K)){
+                    levels[3] = true;
+                    level_completed++;
+                }
             } break;
             case LEVEL_5:
             {
-
+                if(IsKeyPressed(KEY_K)){
+                    levels[4] = true;
+                    level_completed++;
+                }
             } break;
             case ENDING:
             {
@@ -82,15 +98,14 @@ int main(void)
                 case TITLE:
                 {
                     // TODO: Draw TITLE screen here!
-                    DrawText("TITLE SCREEN", 20, 20, 40, DARKGREEN);
-                    draw_level_buttons(&currentScreen, level_completed);
+                    draw_level_buttons(&currentScreen, level_completed, levels);
 
                 } break;
                 case LEVEL_1:
                 {
                     // TODO: Draw GAMEPLAY screen here!
                     DrawRectangle(0, 0, screenWidth, screenHeight, PURPLE);
-                    DrawText("LEVEL_1", 130, 220, 20, MAROON);
+                    DrawText("LEVEL 1", screenWidth/2, screenHeight/2, 60, MAROON);
                     draw_exit_button(&currentScreen);
 
                 } break;
@@ -98,7 +113,7 @@ int main(void)
                 {
                     // TODO: Draw GAMEPLAY screen here!
                     DrawRectangle(0, 0, screenWidth, screenHeight, PURPLE);
-                    DrawText("LEVEL_2", 130, 220, 20, MAROON);
+                    DrawText("LEVEL 2", screenWidth/2, screenHeight/2, 60, MAROON);
                     draw_exit_button(&currentScreen);
 
                 } break;
@@ -106,7 +121,7 @@ int main(void)
                 {
                     // TODO: Draw GAMEPLAY screen here!
                     DrawRectangle(0, 0, screenWidth, screenHeight, PURPLE);
-                    DrawText("LEVEL_3", 130, 220, 20, MAROON);
+                    DrawText("LEVEL 3", screenWidth/2, screenHeight/2, 60, MAROON);
                     draw_exit_button(&currentScreen);
 
                 } break;
@@ -114,7 +129,7 @@ int main(void)
                 {
                     // TODO: Draw GAMEPLAY screen here!
                     DrawRectangle(0, 0, screenWidth, screenHeight, PURPLE);
-                    DrawText("LEVEL_4", 130, 220, 20, MAROON);
+                    DrawText("LEVEL 4", screenWidth/2, screenHeight/2, 60, MAROON);
                     draw_exit_button(&currentScreen);
 
                 } break;
@@ -122,7 +137,7 @@ int main(void)
                 {
                     // TODO: Draw GAMEPLAY screen here!
                     DrawRectangle(0, 0, screenWidth, screenHeight, PURPLE);
-                    DrawText("LEVEL_5", 130, 220, 20, MAROON);
+                    DrawText("LEVEL 5", screenWidth/2, screenHeight/2, 60, MAROON);
                     draw_exit_button(&currentScreen);
 
                 } break;
@@ -153,7 +168,7 @@ int main(void)
     return 0;
 }
 
-void draw_level_buttons(GameScreen *current_screen, int level_completed){
+void draw_level_buttons(GameScreen *current_screen, int level_completed, bool *levels){
     Rectangle level_buttons[5];
     float level_buttons_width = 250.0f, level_buttons_height = 140.0f;
     // Padding under and top of the button
@@ -165,7 +180,8 @@ void draw_level_buttons(GameScreen *current_screen, int level_completed){
 
     int choosen_level = 0;
 
-    int frames_counter = 120;
+    static int display_text_timer = 0;
+
 
     for(int i = 0 ; i < 5; i++){
         level_buttons[i] = (Rectangle){
@@ -174,6 +190,17 @@ void draw_level_buttons(GameScreen *current_screen, int level_completed){
             .width = level_buttons_width,
             .height = level_buttons_height
         };
+        
+        // Display if a level was completed or not by drawing a rectangle behind the given button
+        Rectangle button_underlay = (Rectangle){
+            .x = (GetScreenWidth()/2 - level_buttons_width/2) - 15.0f,
+            .y = (100.0f + i*(level_buttons_height + padding)) - 15.0f,
+            .width = level_buttons_width + 30.0f,
+            .height = level_buttons_height + 30.0f
+        };
+        if(levels[i]) DrawRectangleRec(button_underlay, GREEN);
+        else DrawRectangleRec(button_underlay, RED);
+        
         if(GuiButton(level_buttons[i], TextFormat("%d. pálya", i+1))){
             // Save the index of the level button the user clicked on
             choosen_level = i+1;
@@ -203,19 +230,25 @@ void draw_level_buttons(GameScreen *current_screen, int level_completed){
         if(4 <= level_completed){
             *current_screen = LEVEL_5;
         } else {
-            TODO: FIX THIS
-            frames_counter = 0;
+            // This will activate the timer
+            display_text_timer = 120; 
         }
         break; 
     
     default:
         break;
     }
-    while(frames_counter < 120){
-        DrawText("Teljesítened kell az első négy pályát mielőtt elkezdhetnéd az utolsót!", 0, 0, 30.0f, BLACK);
-        frames_counter++;
+
+    if(display_text_timer > 0){ 
+        DrawText("Még nem teljesítetted a többi pályát!", GetScreenWidth()/4 - 100.0f, 10.0f, 60.0f, RED);
+        display_text_timer--;
+    }
+
+    if(levels[4]){
+        DrawText("Gratulálunk! Sikeresen teljesítetted a játékot!", GetScreenWidth()/4 - 220.0f, 10.0f, 60.0f, GREEN);
     }
 }
+
 
 bool draw_exit_button(GameScreen *current_screen){
     // I have no idea how to set the font size for only one instance, so I save the relevant font then reload it after I draw parts with the temporary font size
