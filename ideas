@@ -1,0 +1,6 @@
+Level 1:
+    -secondary problem: -there is a switch on the map which the user cannot use without electricity
+                        -first there is no electricity. The player has to solve why (the plugg is off)
+                        - when the player managed to find out the reason, he can toggle the switch on and off
+                        - when the player has closed the switch, he gets a clue for the mystery via an electric device
+    -main problem:      -

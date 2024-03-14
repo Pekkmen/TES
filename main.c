@@ -91,6 +91,8 @@ int main(void)
 
         // Draw
         //----------------------------------------------------------------------------------
+        Texture2D lever_lever = LoadTexture("lever_lever.png");
+        Texture2D lever_bottom = LoadTexture("lever_bottom.png");
         BeginDrawing();
 
             ClearBackground(RAYWHITE);
@@ -101,6 +103,8 @@ int main(void)
                 {
                     // TODO: Draw TITLE screen here!
                     draw_level_buttons(&currentScreen, level_completed, levels);
+                    DrawTexture(lever_lever, 100, 400, WHITE);
+                    DrawTexture(lever_bottom, 100, 400, WHITE);
 
                 } break;
                 case LEVEL_1:
