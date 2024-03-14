@@ -9,6 +9,7 @@ typedef enum GameScreen {TITLE, LEVEL_1, LEVEL_2, LEVEL_3, LEVEL_4, LEVEL_5, END
 
 void draw_level_buttons(GameScreen*, int, bool *);
 bool draw_exit_button(GameScreen *);
+bool draw_level_1(void);
 
 //------------------------------------------------------------------------------------
 // Program main entry point
@@ -272,4 +273,8 @@ bool draw_exit_button(GameScreen *current_screen){
     
     // Load back the original font
     GuiSetFont(real_font);
+}
+
+bool draw_level_1(){
+    
 }
