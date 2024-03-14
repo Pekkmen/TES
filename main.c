@@ -21,6 +21,7 @@ int main(void)
     const int screenHeight = 1080;
 
     InitWindow(screenWidth, screenHeight, "TES");
+    ToggleFullscreen();
 
     GameScreen currentScreen = TITLE;
 
