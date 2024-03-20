@@ -9,7 +9,7 @@ typedef enum GameScreen {TITLE, LEVEL_1, LEVEL_2, LEVEL_3, LEVEL_4, LEVEL_5, END
 
 void draw_level_buttons(GameScreen*, int, bool *);
 bool draw_exit_button(GameScreen *);
-bool draw_level_1(void);
+bool draw_level_1(GameScreen *);
 
 //------------------------------------------------------------------------------------
 // Program main entry point
@@ -22,7 +22,7 @@ int main(void)
     const int screenHeight = 1080;
 
     InitWindow(screenWidth, screenHeight, "TES");
-    ToggleFullscreen();
+    //ToggleFullscreen();
 
     GameScreen currentScreen = TITLE;
 
@@ -91,8 +91,6 @@ int main(void)
 
         // Draw
         //----------------------------------------------------------------------------------
-        Texture2D lever_lever = LoadTexture("lever_lever.png");
-        Texture2D lever_bottom = LoadTexture("lever_bottom.png");
         BeginDrawing();
 
             ClearBackground(RAYWHITE);
@@ -103,8 +101,6 @@ int main(void)
                 {
                     // TODO: Draw TITLE screen here!
                     draw_level_buttons(&currentScreen, level_completed, levels);
-                    DrawTexture(lever_lever, 100, 400, WHITE);
-                    DrawTexture(lever_bottom, 100, 400, WHITE);
 
                 } break;
                 case LEVEL_1:
@@ -112,7 +108,7 @@ int main(void)
                     // TODO: Draw GAMEPLAY screen here!
                     DrawRectangle(0, 0, screenWidth, screenHeight, PURPLE);
                     DrawText("LEVEL 1", screenWidth/2, screenHeight/2, 60, MAROON);
-                    draw_exit_button(&currentScreen);
+                    draw_level_1(&currentScreen);
 
                 } break;
                 case LEVEL_2:
@@ -273,12 +269,55 @@ bool draw_exit_button(GameScreen *current_screen){
     };
     if(GuiButton(exit_button, "Menü")){
         *current_screen = TITLE;
+        // Load back the original font
+        GuiSetFont(real_font);
+
+        return true;
     }
     
     // Load back the original font
     GuiSetFont(real_font);
+
+    return false;
 }
 
-bool draw_level_1(){
-    
+bool draw_level_1(GameScreen *currentScreen) {
+    static bool textures_loaded = false;
+    static Texture2D lever_lever, lever_bottom;
+    // Loading textures
+    if(!textures_loaded){
+        lever_lever = LoadTexture("assets/level_1/lever_lever.png");
+        lever_bottom = LoadTexture("assets/level_1/lever_bottom.png");
+
+        textures_loaded = true;
+    }
+
+    static float rotation = 0.0f;
+    if(IsMouseButtonDown(MOUSE_BUTTON_LEFT)) rotation++;
+    else if(IsMouseButtonDown(MOUSE_BUTTON_RIGHT)) rotation--;
+
+    // Draw the lever parts
+    float lever_scale = 0.4f;
+    Vector2 lever_lever_size = (Vector2){lever_lever.width * lever_scale, lever_lever.height * lever_scale};
+    Vector2 lever_bottom_size = (Vector2){lever_bottom.width * lever_scale, lever_bottom.height * lever_scale};
+    DrawTexturePro(lever_lever,
+                    (Rectangle){0.0f, 0.0f, lever_lever.width, lever_lever.height},
+                    (Rectangle){345.0f, 1457.0f - lever_lever_size.y, lever_lever_size.x, lever_lever_size.y},
+                    (Vector2){583.0f*lever_scale, 969.0f*lever_scale},
+                    rotation,
+                    WHITE);
+    DrawTexturePro(lever_bottom,
+                    (Rectangle){0.0f, 0.0f, lever_bottom.width, lever_bottom.height},
+                    (Rectangle){100.0f, GetScreenHeight() - lever_bottom_size.y, lever_bottom_size.x, lever_bottom_size.y},
+                    (Vector2){0.0f, 0.0f},
+                    0.0f,
+                    WHITE);
+
+    // If the user has clicked on the Menu button, unload the textures
+    if(draw_exit_button(currentScreen)){
+        UnloadTexture(lever_lever);
+        UnloadTexture(lever_bottom);
+
+        textures_loaded = false;
+    }
 }
