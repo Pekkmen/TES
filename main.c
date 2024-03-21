@@ -292,24 +292,37 @@ bool draw_level_1(GameScreen *currentScreen) {
         textures_loaded = true;
     }
 
+    Vector2 lever_lever_size = (Vector2){lever_lever.width, lever_lever.height};
+    Vector2 lever_bottom_size = (Vector2){lever_bottom.width, lever_bottom.height};
+    // Destionation rectangle of the lever_Lever texture
+    Rectangle level_level_rec = (Rectangle){
+        .x = 100.0f + 260.0f,
+        .y = GetScreenHeight() - lever_bottom_size.y + 331.0f*0.75,
+        .width = lever_lever_size.x,
+        .height = lever_lever_size.y
+    };
+
     static float rotation = 0.0f;
-    if(IsMouseButtonDown(MOUSE_BUTTON_LEFT)) rotation++;
-    else if(IsMouseButtonDown(MOUSE_BUTTON_RIGHT)) rotation--;
+    float mouse_pos_x_pressed;
+    // Check fif the left mouse button was pressed inside the rectangle of the lever
+    if(IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && CheckCollisionPointRec(GetMousePosition(), level_level_rec)){
+        mouse_pos_x_pressed = GetMousePosition().x;
+    } else if(IsMouseButtonDown(MOUSE_BUTTON_LEFT) && CheckCollisionPointRec(GetMousePosition(), level_level_rec)){
+        // (The x axis of the mouse position - x axis of the texture's origin point) - the x axis of the mouse position when the mouse left button was pressed down * scale (so "pulling" the lever is slower)
+        rotation += ((GetMousePosition().x - (100.0f + 260.0f)) - mouse_pos_x_pressed) * 0.01;
+    }
 
     // Draw the lever parts
-    float lever_scale = 0.4f;
-    Vector2 lever_lever_size = (Vector2){lever_lever.width * lever_scale, lever_lever.height * lever_scale};
-    Vector2 lever_bottom_size = (Vector2){lever_bottom.width * lever_scale, lever_bottom.height * lever_scale};
     DrawTexturePro(lever_lever,
                     (Rectangle){0.0f, 0.0f, lever_lever.width, lever_lever.height},
-                    (Rectangle){345.0f, 1457.0f - lever_lever_size.y, lever_lever_size.x, lever_lever_size.y},
-                    (Vector2){583.0f*lever_scale, 969.0f*lever_scale},
+                    level_level_rec,
+                    (Vector2){260.0f, 331.0f},
                     rotation,
                     WHITE);
     DrawTexturePro(lever_bottom,
                     (Rectangle){0.0f, 0.0f, lever_bottom.width, lever_bottom.height},
-                    (Rectangle){100.0f, GetScreenHeight() - lever_bottom_size.y, lever_bottom_size.x, lever_bottom_size.y},
-                    (Vector2){0.0f, 0.0f},
+                    (Rectangle){100.0f + 260.0f, GetScreenHeight() - lever_bottom_size.y + 331.0f, lever_bottom_size.x, lever_bottom_size.y},
+                    (Vector2){260.0f, 331.0f},
                     0.0f,
                     WHITE);
 
