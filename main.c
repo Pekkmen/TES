@@ -284,7 +284,7 @@ bool draw_exit_button(GameScreen *current_screen){
 
 bool draw_level_1(GameScreen *currentScreen) {
     static bool textures_loaded = false;
-    bool electricity = false;
+    static bool electricity = false, switched_on = false;
     static Texture2D lever_lever, lever_bottom, display_off, display_on;
     // Loading textures
     if(!textures_loaded){
@@ -295,6 +295,9 @@ bool draw_level_1(GameScreen *currentScreen) {
 
         textures_loaded = true;
     }
+    // DEBUG
+    if(IsKeyPressed(KEY_S) && !electricity) electricity = true;
+    else if(IsKeyPressed(KEY_S) && electricity) electricity = false; 
 
     Vector2 lever_lever_size = (Vector2){lever_lever.width, lever_lever.height};
     Vector2 lever_bottom_size = (Vector2){lever_bottom.width, lever_bottom.height};
@@ -306,8 +309,24 @@ bool draw_level_1(GameScreen *currentScreen) {
         .height = lever_lever_size.y
     };
 
-    if(electricity) DrawTexture(display_on, 500, 500, WHITE);
-    else DrawTexture(display_off, 500, 500, WHITE);
+    // Drawing the 7 segment display
+    Rectangle display_src = (Rectangle){
+        .x = 0.0f,
+        .y = 0.0f,
+        .width = display_on.width,
+        .height = display_on.height
+    };
+
+    Rectangle display_rec = (Rectangle){
+        .x = 260.0f,
+        .y = 700.0f,
+        .width = display_on.width * 0.8,
+        .height = display_on.height * 0.8
+    };
+
+    if(electricity) DrawTexturePro(display_on, display_src, display_rec, (Vector2){.x=0, .y=0}, 0.0f, WHITE);
+    else DrawTexturePro(display_off, display_src, display_rec, (Vector2){.x=0, .y=0}, 0.0f, WHITE);
+
 
     // I think changing the origin point shifts the entire rectangle away, so and unshifted version should be used for detecting clicks on the lever
     Rectangle unshifted_lever_rec = (Rectangle){
@@ -316,8 +335,6 @@ bool draw_level_1(GameScreen *currentScreen) {
         .width = lever_lever_size.x,
         .height = lever_lever_size.y
     };
-    // 260.0f, 331.0f
-    DrawRectangle(260.0f, 700.0f, 200.0f, 100.0f, BLACK);
 
     // ORIGINAL PLAN: There should be a circle at the end of the lever (where the knob is on the lever), so a click on it could be detected and 'realistic' feel of pulling the lever can be achieved
     // static Vector2 p = (Vector2){.x = 360, .y = 955};
@@ -354,6 +371,114 @@ bool draw_level_1(GameScreen *currentScreen) {
                     0.0f,
                     WHITE);
     // DrawCircle(c.x, c.y, 32.0f, BLACK);
+
+    if(rotation <= -44.0f) switched_on = true;
+    else switched_on = false;
+    // DEBUG
+    if(switched_on) DrawText("ON", 500, 500, 50, BLACK);
+    else DrawText("OFF", 500, 500, 50, BLACK);
+
+    typedef struct LogicGates {
+        Rectangle rec;
+        int input1;
+        int input2;
+        int output;
+    } LogicGates;
+
+    static LogicGates logic_gates[6];
+
+    // Drawing the electricity source rectangle
+    typedef struct E_Source{
+        Rectangle rec;
+        int output;
+    } E_Source;
+
+    // The main inputs of the circuit
+    static E_Source e_sources[6];
+    for(int i = 0; i < 6; i++){
+        e_sources[i].rec = (Rectangle){
+            .x = 800.0f + (i * 200),
+            .y = 150.0f,
+            .width = 100.0f,
+            .height = 100.0f
+        };
+        e_sources[i].output = 0;
+    }
+
+    e_sources[0].output = 1;
+    e_sources[2].output = 1;
+    e_sources[3].output = 1;
+    e_sources[5].output = 1;
+
+    for(int i = 0; i < 6; i++){
+        if(e_sources[i].output == 0)
+            DrawRectanglePro(e_sources[i].rec, (Vector2){.x=0.0f, .y=0.0f}, 0.0f, DARKGREEN);
+        else if(e_sources[i].output == 1)
+            DrawRectanglePro(e_sources[i].rec, (Vector2){.x=0.0f, .y=0.0f}, 0.0f, GREEN);
+        else
+            DrawRectanglePro(e_sources[i].rec, (Vector2){.x=0.0f, .y=0.0f}, 0.0f, RED);
+    }
+
+    // Initializing the logic gates placement rectangles
+    for(int i = 0; i < 6; i++){
+        logic_gates[i] = (LogicGates){
+            .input1 = -1,
+            .input2 = -1,
+            .output = -1,
+            .rec = (Rectangle){
+                .x = 800.0f,
+                .y = 350.0f,
+                .width = 100.0f,
+                .height = 100.0f
+            }
+        };
+        logic_gates[i].output = -1;
+    }
+    logic_gates[0].rec.x = 900;
+    logic_gates[1].rec.x = 1300;
+    logic_gates[2].rec.x = 1700;
+    logic_gates[3].rec.x = 1100;
+    logic_gates[3].rec.y = 550;
+    logic_gates[4].rec.x = 1500;
+    logic_gates[4].rec.y = 550;
+    logic_gates[5].rec.x = 1300;
+    logic_gates[5].rec.y = 750;
+
+    // Drawing the logic gates placement rectangles
+    for(int i = 0; i < 6; i++){
+        if(logic_gates[i].output == 0)
+            DrawRectanglePro(logic_gates[i].rec, (Vector2){.x=0.0f, .y=0.0f}, 0.0f, DARKGREEN);
+        else if(logic_gates[i].output == 1)
+            DrawRectanglePro(logic_gates[i].rec, (Vector2){.x=0.0f, .y=0.0f}, 0.0f, GREEN);
+        else 
+            DrawRectanglePro(logic_gates[i].rec, (Vector2){.x=0.0f, .y=0.0f}, 0.0f, RED);
+    }
+
+    // The main output of the circuit
+    typedef struct E_Output {
+        Rectangle rec;
+        int input1;
+        int input2;
+        int output;
+    } E_Output;
+
+    E_Output e_output = {
+        .rec = (Rectangle){
+            .x = 1300.0f,
+            .y = 920.0f,
+            .width = 100.0f,
+            .height = 100.0f
+        },
+        .input1 = -1,
+        .input2 = -1,
+        .output = -1
+    };
+    if(e_output.output == 0)
+        DrawRectanglePro(e_output.rec, (Vector2){.x=0.0f, .y=0.0f}, 0.0f, GRAY);
+    else if(e_output.output == 1) 
+        DrawRectanglePro(e_output.rec, (Vector2){.x=0.0f, .y=0.0f}, 0.0f, GREEN);
+    else 
+        DrawRectanglePro(e_output.rec, (Vector2){.x=0.0f, .y=0.0f}, 0.0f, RED);
 
     // If the user has clicked on the Menu button, unload the textures
     if(draw_exit_button(currentScreen)){
