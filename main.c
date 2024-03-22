@@ -1,6 +1,7 @@
 #include "raylib.h"
 #define RAYGUI_IMPLEMENTATION
 #include "src/raygui.h"
+#include <math.h>
 
 //------------------------------------------------------------------------------------------
 // Types and Structures Definition
@@ -283,11 +284,14 @@ bool draw_exit_button(GameScreen *current_screen){
 
 bool draw_level_1(GameScreen *currentScreen) {
     static bool textures_loaded = false;
-    static Texture2D lever_lever, lever_bottom;
+    bool electricity = false;
+    static Texture2D lever_lever, lever_bottom, display_off, display_on;
     // Loading textures
     if(!textures_loaded){
         lever_lever = LoadTexture("assets/level_1/lever_lever.png");
         lever_bottom = LoadTexture("assets/level_1/lever_bottom.png");
+        display_off = LoadTexture("assets/level_1/on_off_display_OFF.png");
+        display_on = LoadTexture("assets/level_1/on_off_display_ON.png");
 
         textures_loaded = true;
     }
@@ -302,14 +306,38 @@ bool draw_level_1(GameScreen *currentScreen) {
         .height = lever_lever_size.y
     };
 
-    static float rotation = 0.0f;
+    if(electricity) DrawTexture(display_on, 500, 500, WHITE);
+    else DrawTexture(display_off, 500, 500, WHITE);
+
+    // I think changing the origin point shifts the entire rectangle away, so and unshifted version should be used for detecting clicks on the lever
+    Rectangle unshifted_lever_rec = (Rectangle){
+        .x = 100.0f,
+        .y = GetScreenHeight() - lever_bottom_size.y,
+        .width = lever_lever_size.x,
+        .height = lever_lever_size.y
+    };
+    // 260.0f, 331.0f
+    DrawRectangle(260.0f, 700.0f, 200.0f, 100.0f, BLACK);
+
+    // ORIGINAL PLAN: There should be a circle at the end of the lever (where the knob is on the lever), so a click on it could be detected and 'realistic' feel of pulling the lever can be achieved
+    // static Vector2 p = (Vector2){.x = 360, .y = 955};
+    // static Vector2 l = (Vector2){.x = 570, .y = 750};
+    // static Vector2 c = (Vector2){.x = 570, .y = 750};
+    // float distance = sqrt(pow(l.x - p.x, 2) + pow(l.y - p.y, 2));
+    static float rotation = 45.0f, d_rotation = 0.0f;
     float mouse_pos_x_pressed;
     // Check fif the left mouse button was pressed inside the rectangle of the lever
-    if(IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && CheckCollisionPointRec(GetMousePosition(), level_level_rec)){
+    if(electricity && (MOUSE_BUTTON_LEFT) && CheckCollisionPointRec(GetMousePosition(), unshifted_lever_rec)){
         mouse_pos_x_pressed = GetMousePosition().x;
-    } else if(IsMouseButtonDown(MOUSE_BUTTON_LEFT) && CheckCollisionPointRec(GetMousePosition(), level_level_rec)){
+    } else if(electricity && IsMouseButtonDown(MOUSE_BUTTON_LEFT) && CheckCollisionPointRec(GetMousePosition(), unshifted_lever_rec)){
         // (The x axis of the mouse position - x axis of the texture's origin point) - the x axis of the mouse position when the mouse left button was pressed down * scale (so "pulling" the lever is slower)
-        rotation += ((GetMousePosition().x - (100.0f + 260.0f)) - mouse_pos_x_pressed) * 0.01;
+        d_rotation = ((GetMousePosition().x - (100.0f + 260.0f)) - mouse_pos_x_pressed) * 0.01;;
+        if(-45.0f <= rotation && rotation <= 45.0f){
+            rotation += d_rotation;
+            // c.x = p.x + distance * cos(rotation * 0.1);
+            // c.y = p.y + distance * sin(rotation * 0.1);
+        } else if(rotation < -45.0f && 0 < d_rotation) rotation += d_rotation;
+        else if(electricity && 45.0f < rotation && d_rotation < 0) rotation += d_rotation;
     }
 
     // Draw the lever parts
@@ -325,11 +353,14 @@ bool draw_level_1(GameScreen *currentScreen) {
                     (Vector2){260.0f, 331.0f},
                     0.0f,
                     WHITE);
+    // DrawCircle(c.x, c.y, 32.0f, BLACK);
 
     // If the user has clicked on the Menu button, unload the textures
     if(draw_exit_button(currentScreen)){
         UnloadTexture(lever_lever);
         UnloadTexture(lever_bottom);
+        UnloadTexture(display_off);
+        UnloadTexture(display_on);
 
         textures_loaded = false;
     }
