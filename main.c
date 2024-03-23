@@ -285,13 +285,19 @@ bool draw_exit_button(GameScreen *current_screen){
 bool draw_level_1(GameScreen *currentScreen) {
     static bool textures_loaded = false;
     static bool electricity = false, switched_on = false;
-    static Texture2D lever_lever, lever_bottom, display_off, display_on;
+    static Texture2D lever_lever, lever_bottom, display_off, display_on, gate_AND, gate_OR, gate_NAND, gate_NOR, gate_XOR, gate_XNOR;
     // Loading textures
     if(!textures_loaded){
         lever_lever = LoadTexture("assets/level_1/lever_lever.png");
         lever_bottom = LoadTexture("assets/level_1/lever_bottom.png");
         display_off = LoadTexture("assets/level_1/on_off_display_OFF.png");
         display_on = LoadTexture("assets/level_1/on_off_display_ON.png");
+        gate_AND = LoadTexture("assets/level_1/AND.png");
+        gate_OR = LoadTexture("assets/level_1/OR.png");
+        gate_NAND = LoadTexture("assets/level_1/NAND.png");
+        gate_NOR = LoadTexture("assets/level_1/NOR.png");
+        gate_XOR = LoadTexture("assets/level_1/XOR.png");
+        gate_XNOR = LoadTexture("assets/level_1/XNOR.png");
 
         textures_loaded = true;
     }
@@ -357,19 +363,6 @@ bool draw_level_1(GameScreen *currentScreen) {
         else if(electricity && 45.0f < rotation && d_rotation < 0) rotation += d_rotation;
     }
 
-    // Draw the lever parts
-    DrawTexturePro(lever_lever,
-                    (Rectangle){0.0f, 0.0f, lever_lever.width, lever_lever.height},
-                    level_level_rec,
-                    (Vector2){260.0f, 331.0f},
-                    rotation,
-                    WHITE);
-    DrawTexturePro(lever_bottom,
-                    (Rectangle){0.0f, 0.0f, lever_bottom.width, lever_bottom.height},
-                    (Rectangle){100.0f + 260.0f, GetScreenHeight() - lever_bottom_size.y + 331.0f, lever_bottom_size.x, lever_bottom_size.y},
-                    (Vector2){260.0f, 331.0f},
-                    0.0f,
-                    WHITE);
     // DrawCircle(c.x, c.y, 32.0f, BLACK);
 
     if(rotation <= -44.0f) switched_on = true;
@@ -378,19 +371,12 @@ bool draw_level_1(GameScreen *currentScreen) {
     if(switched_on) DrawText("ON", 500, 500, 50, BLACK);
     else DrawText("OFF", 500, 500, 50, BLACK);
 
-    typedef struct LogicGates {
-        Rectangle rec;
-        int input1;
-        int input2;
-        int output;
-    } LogicGates;
-
-    static LogicGates logic_gates[6];
 
     // Drawing the electricity source rectangle
     typedef struct E_Source{
         Rectangle rec;
         int output;
+        Vector2 output_pos;
     } E_Source;
 
     // The main inputs of the circuit
@@ -403,6 +389,10 @@ bool draw_level_1(GameScreen *currentScreen) {
             .height = 100.0f
         };
         e_sources[i].output = 0;
+        e_sources[i].output_pos = (Vector2){
+            .x = e_sources[i].rec.x + e_sources[i].rec.width/2,
+            .y = e_sources[i].rec.y + e_sources[i].rec.height
+        };
     }
 
     e_sources[0].output = 1;
@@ -419,6 +409,17 @@ bool draw_level_1(GameScreen *currentScreen) {
             DrawRectanglePro(e_sources[i].rec, (Vector2){.x=0.0f, .y=0.0f}, 0.0f, RED);
     }
 
+    typedef struct LogicGates {
+        Rectangle rec;
+        int input1;
+        Vector2 input1_pos;
+        int input2;
+        Vector2 input2_pos;
+        int output;
+        Vector2 output_pos;
+    } LogicGates;
+
+    static LogicGates logic_gates[6];
     // Initializing the logic gates placement rectangles
     for(int i = 0; i < 6; i++){
         logic_gates[i] = (LogicGates){
@@ -430,9 +431,14 @@ bool draw_level_1(GameScreen *currentScreen) {
                 .y = 350.0f,
                 .width = 100.0f,
                 .height = 100.0f
-            }
+            },
+            .input1_pos.x = logic_gates[i].rec.x + logic_gates[i].rec.width/3,
+            .input1_pos.y = logic_gates[i].rec.y,
+            .input2_pos.x = logic_gates[i].rec.x + 2*logic_gates[i].rec.width/3,
+            .input2_pos.y = logic_gates[i].rec.y,
+            .output_pos.x = logic_gates[i].rec.x + logic_gates[i].rec.width/2,
+            .output_pos.y = logic_gates[i].rec.y + logic_gates[i].rec.height
         };
-        logic_gates[i].output = -1;
     }
     logic_gates[0].rec.x = 900;
     logic_gates[1].rec.x = 1300;
@@ -457,22 +463,27 @@ bool draw_level_1(GameScreen *currentScreen) {
     // The main output of the circuit
     typedef struct E_Output {
         Rectangle rec;
-        int input1;
-        int input2;
+        int input;
+        Vector2 input_pos;
         int output;
+        Vector2 output_pos;
     } E_Output;
 
     E_Output e_output = {
         .rec = (Rectangle){
-            .x = 1300.0f,
-            .y = 920.0f,
+            .x = 500.0f,
+            .y = 1040.0f,
             .width = 100.0f,
             .height = 100.0f
         },
-        .input1 = -1,
-        .input2 = -1,
-        .output = -1
+        .input = -1,
+        .output = -1,
+        .input_pos.x = e_output.rec.x + e_output.rec.width/2,
+        .input_pos.y = e_output.rec.y,
+        .output_pos.x = e_output.rec.x + e_output.rec.width/2,
+        .output_pos.y = e_output.rec.y + e_output.rec.height
     };
+
     if(e_output.output == 0)
         DrawRectanglePro(e_output.rec, (Vector2){.x=0.0f, .y=0.0f}, 0.0f, GRAY);
     else if(e_output.output == 1) 
@@ -480,12 +491,136 @@ bool draw_level_1(GameScreen *currentScreen) {
     else 
         DrawRectanglePro(e_output.rec, (Vector2){.x=0.0f, .y=0.0f}, 0.0f, RED);
 
+    // Initializing the wires connecting the logic gates
+    typedef struct Wire {
+        int status;
+        Vector2 input_pos;
+        Vector2 output_pos;
+    } Wire;
+
+    Wire wires[13];
+    for(int i = 0; i < 13; i++){
+        wires[i] = (Wire){
+            .status = -1,
+        };
+    }
+
+    // Connecting and setting up the status of the wires connecting the first row of logic gates
+    for(int i = 0; i < 6; i += 2) {
+        // Determine the index of the logic gate
+        int gate_index = i / 2; 
+
+        // First wire of the pair
+        wires[i].input_pos.x = e_sources[i].output_pos.x;
+        wires[i].input_pos.y = e_sources[i].output_pos.y;
+        wires[i].output_pos.x = logic_gates[gate_index].input1_pos.x;
+        wires[i].output_pos.y = logic_gates[gate_index].input1_pos.y;
+        wires[i].status = e_sources[i].output;
+
+        // Second wire of the pair
+        wires[i+1].input_pos.x = e_sources[i+1].output_pos.x;
+        wires[i+1].input_pos.y = e_sources[i+1].output_pos.y;
+        wires[i+1].output_pos.x = logic_gates[gate_index].input2_pos.x;
+        wires[i+1].output_pos.y = logic_gates[gate_index].input2_pos.y;
+        wires[i+1].status = e_sources[i+1].output;
+    }
+
+    // Ugly as hell boilerplate
+    wires[6].input_pos.x = logic_gates[0].output_pos.x;
+    wires[6].input_pos.y = logic_gates[0].output_pos.y;
+    wires[6].output_pos.x = logic_gates[3].input1_pos.x;
+    wires[6].output_pos.y = logic_gates[3].input1_pos.y;
+    wires[7].input_pos.x = logic_gates[1].output_pos.x;
+    wires[7].input_pos.y = logic_gates[1].output_pos.y;
+    wires[7].output_pos.x = logic_gates[3].input2_pos.x;
+    wires[7].output_pos.y = logic_gates[3].input2_pos.y;
+
+    wires[8].input_pos.x = logic_gates[1].output_pos.x;
+    wires[8].input_pos.y = logic_gates[1].output_pos.y;
+    wires[8].output_pos.x = logic_gates[4].input1_pos.x;
+    wires[8].output_pos.y = logic_gates[4].input1_pos.y;
+    wires[9].input_pos.x = logic_gates[2].output_pos.x;
+    wires[9].input_pos.y = logic_gates[2].output_pos.y;
+    wires[9].output_pos.x = logic_gates[4].input2_pos.x;
+    wires[9].output_pos.y = logic_gates[4].input2_pos.y;
+
+    wires[10].input_pos.x = logic_gates[3].output_pos.x;
+    wires[10].input_pos.y = logic_gates[3].output_pos.y;
+    wires[10].output_pos.x = logic_gates[5].input1_pos.x;
+    wires[10].output_pos.y = logic_gates[5].input1_pos.y;
+    wires[11].input_pos.x = logic_gates[4].output_pos.x;
+    wires[11].input_pos.y = logic_gates[4].output_pos.y;
+    wires[11].output_pos.x = logic_gates[5].input2_pos.x;
+    wires[11].output_pos.y = logic_gates[5].input2_pos.y;
+
+    wires[12].input_pos.x = logic_gates[5].output_pos.x;
+    wires[12].input_pos.y = logic_gates[5].output_pos.y;
+    wires[12].output_pos.x = e_output.input_pos.x;
+    wires[12].output_pos.y = e_output.input_pos.y;
+
+    // Draw the wires
+    for(int i = 0; i < 13; i++){
+        if(wires[i].status == -1){
+            DrawLineBezier(wires[i].input_pos, wires[i].output_pos, 5, RED);
+        } else if(wires[i].status == 0){
+            DrawLineBezier(wires[i].input_pos, wires[i].output_pos, 5, DARKGREEN);
+        } else if(wires[i].status == 1){
+            DrawLineBezier(wires[i].input_pos, wires[i].output_pos, 5, GREEN);
+        }
+    }
+
+    // Draw the lever parts
+    DrawTexturePro(lever_lever,
+                    (Rectangle){0.0f, 0.0f, lever_lever.width, lever_lever.height},
+                    level_level_rec,
+                    (Vector2){260.0f, 331.0f},
+                    rotation,
+                    WHITE);
+    DrawTexturePro(lever_bottom,
+                    (Rectangle){0.0f, 0.0f, lever_bottom.width, lever_bottom.height},
+                    (Rectangle){100.0f + 260.0f, GetScreenHeight() - lever_bottom_size.y + 331.0f, lever_bottom_size.x, lever_bottom_size.y},
+                    (Vector2){260.0f, 331.0f},
+                    0.0f,
+                    WHITE);
+
+    Rectangle logic_gates_src = (Rectangle){
+        .x = 0.0f,
+        .y = 0.0f,
+        .width = gate_XNOR.width,
+        .height = gate_XNOR.height
+    };
+    Rectangle logic_gates_recs[6];
+    for(int i = 0; i < 6; i++){
+        logic_gates_recs[i] = (Rectangle){
+            .x = 150.0f * i,
+            .y = 200.0f,
+            .width = 80.0f,
+            .height = 100.0f
+        };
+    }
+    
+    DrawTexturePro(gate_AND, logic_gates_src, logic_gates_recs[0], (Vector2){.x=0,.y=0}, 0, WHITE);
+    DrawTexturePro(gate_OR, logic_gates_src, logic_gates_recs[1], (Vector2){.x=0,.y=0}, 0, WHITE);
+    DrawTexturePro(gate_NAND, logic_gates_src, logic_gates_recs[2], (Vector2){.x=0,.y=0}, 0, WHITE);
+    DrawTexturePro(gate_NOR, logic_gates_src, logic_gates_recs[3], (Vector2){.x=0,.y=0}, 0, WHITE);
+    DrawTexturePro(gate_XOR, logic_gates_src, logic_gates_recs[4], (Vector2){.x=0,.y=0}, 0, WHITE);
+    DrawTexturePro(gate_XNOR, logic_gates_src, logic_gates_recs[5], (Vector2){.x=0,.y=0}, 0, WHITE);
+
+    Vector2 pos = GetMousePosition();
+    if(IsMouseButtonDown(MOUSE_BUTTON_LEFT)) DrawText(TextFormat("%.0f, %.0f", pos.x, pos.y), 600, 600, 60, BLACK);
+
     // If the user has clicked on the Menu button, unload the textures
     if(draw_exit_button(currentScreen)){
         UnloadTexture(lever_lever);
         UnloadTexture(lever_bottom);
         UnloadTexture(display_off);
         UnloadTexture(display_on);
+        UnloadTexture(gate_AND);
+        UnloadTexture(gate_OR);
+        UnloadTexture(gate_NAND);
+        UnloadTexture(gate_NOR);
+        UnloadTexture(gate_XOR);
+        UnloadTexture(gate_XNOR);
 
         textures_loaded = false;
     }
