@@ -23,11 +23,16 @@ typedef struct LogicGates {
     int output;
     Vector2 output_pos;
 } LogicGates;
+typedef struct Wire {
+    int status;
+    Vector2 input_pos;
+    Vector2 output_pos;
+} Wire;
 
 void draw_level_buttons(GameScreen*, int, bool *);
 bool draw_exit_button(GameScreen *);
 bool draw_level_1(GameScreen *);
-void change_logic_values(LogicGates *, int);
+void change_logic_values(LogicGates *, int, int, Wire *);
 void reset_logic_value(LogicGates  *);
 
 //------------------------------------------------------------------------------------
@@ -203,7 +208,6 @@ void draw_level_buttons(GameScreen *current_screen, int level_completed, bool *l
 
     static int display_text_timer = 0;
 
-
     for(int i = 0 ; i < 5; i++){
         level_buttons[i] = (Rectangle){
             .x = GetScreenWidth()/2 - level_buttons_width/2,
@@ -301,9 +305,53 @@ bool draw_exit_button(GameScreen *current_screen){
 }
 
 bool draw_level_1(GameScreen *currentScreen) {
-    static bool textures_loaded = false, initialized = false;
+    typedef struct E_Source{
+        Rectangle rec;
+        int output;
+        Vector2 output_pos;
+    } E_Source;
+
+    // The main output of the circuit
+    typedef struct E_Output {
+        Rectangle rec;
+        int input;
+        Vector2 input_pos;
+        int output;
+        Vector2 output_pos;
+    } E_Output;
+
+    static bool textures_loaded = false;
+    static bool uninitialized = true;
     static bool electricity = false, switched_on = false;
     static Texture2D lever_lever, lever_bottom, display_off, display_on, lg[6];
+    // The main inputs of the circuit
+    static E_Source e_sources[6];
+    static LogicGates logic_gates[6];
+    static Wire wires[13];
+    static Rectangle logic_gates_recs[6], logic_gates_recs_original[6];
+    static Rectangle logic_gates_src = (Rectangle){
+        .x = 0.0f,
+        .y = 0.0f,
+        .width = 855.0f,
+        .height = 1295.0f
+    };
+    static E_Output e_output = {
+        .rec = (Rectangle){
+            .x = 500.0f,
+            .y = 1040.0f,
+            .width = 100.0f,
+            .height = 100.0f
+        },
+        .input = -1,
+        .output = -1,
+        .input_pos.x = 550.0f,
+        .input_pos.y = 1040.0f,
+        .output_pos.x = 550.0f,
+        .output_pos.y = 1090.0f
+    };
+    // DEBUG
+    static int asd, wire_1, wire_2, wire_1_status, wire_2_status, lg_output;
+
     // Loading textures
     if(!textures_loaded){
         lever_lever = LoadTexture("assets/level_1/lever_lever.png");
@@ -315,6 +363,126 @@ bool draw_level_1(GameScreen *currentScreen) {
         }
 
         textures_loaded = true;
+    }
+    if(uninitialized){
+        for(int i = 0; i < 6; i++){
+            logic_gates_recs[i] = (Rectangle){
+                .x = 150.0f * i + 50,
+                .y = 10.0f,
+                .width = 80.0f,
+                .height = 100.0f
+            };
+            logic_gates_recs_original[i] = logic_gates_recs[i];
+        }
+
+        for(int i = 0; i < 6; i++){
+            e_sources[i].rec = (Rectangle){
+                .x = 800.0f + (i * 200),
+                .y = 150.0f,
+                .width = 100.0f,
+                .height = 100.0f
+            };
+            e_sources[i].output = 0;
+            e_sources[i].output_pos = (Vector2){
+                .x = e_sources[i].rec.x + e_sources[i].rec.width/2,
+                .y = e_sources[i].rec.y + e_sources[i].rec.height
+            };
+        }
+        e_sources[0].output = 1;
+        e_sources[2].output = 1;
+        e_sources[3].output = 1;
+        e_sources[5].output = 1;
+
+        for(int i = 0; i < 6; i++){
+            logic_gates[i] = (LogicGates){
+                .input1 = -1,
+                .input2 = -1,
+                .output = -1,
+                .rec = (Rectangle){
+                    .x = 800.0f,
+                    .y = 350.0f,
+                    .width = 100.0f,
+                    .height = 100.0f
+                },
+            };
+        }
+        logic_gates[0].rec.x = 900;
+        logic_gates[1].rec.x = 1300;
+        logic_gates[2].rec.x = 1700;
+        logic_gates[3].rec.x = 1100;
+        logic_gates[3].rec.y = 550;
+        logic_gates[4].rec.x = 1500;
+        logic_gates[4].rec.y = 550;
+        logic_gates[5].rec.x = 1300;
+        logic_gates[5].rec.y = 750;
+        for(int i = 0; i < 6; i++){
+            logic_gates[i].input1_pos.x = logic_gates[i].rec.x + logic_gates[i].rec.width/3;
+            logic_gates[i].input1_pos.y = logic_gates[i].rec.y;
+            logic_gates[i].input2_pos.x = logic_gates[i].rec.x + 2*logic_gates[i].rec.width/3;
+            logic_gates[i].input2_pos.y = logic_gates[i].rec.y;
+            logic_gates[i].output_pos.x = logic_gates[i].rec.x + logic_gates[i].rec.width/2;
+            logic_gates[i].output_pos.y = logic_gates[i].rec.y + logic_gates[i].rec.height;
+        }
+
+        // Connecting and setting up the status of the wires connecting the first row of logic gates
+        for(int i = 0; i < 13; i++){
+            wires[i].status = -1;
+        }
+        for(int i = 0; i < 6; i += 2) {
+            // Determine the index of the logic gate
+            int gate_index = i/2; 
+
+            // First wire of the pair
+            wires[i].input_pos.x = e_sources[i].output_pos.x;
+            wires[i].input_pos.y = e_sources[i].output_pos.y;
+            wires[i].output_pos.x = logic_gates[gate_index].input1_pos.x;
+            wires[i].output_pos.y = logic_gates[gate_index].input1_pos.y;
+            wires[i].status = e_sources[i].output;
+
+            // Second wire of the pair
+            wires[i+1].input_pos.x = e_sources[i+1].output_pos.x;
+            wires[i+1].input_pos.y = e_sources[i+1].output_pos.y;
+            wires[i+1].output_pos.x = logic_gates[gate_index].input2_pos.x;
+            wires[i+1].output_pos.y = logic_gates[gate_index].input2_pos.y;
+            wires[i+1].status = e_sources[i+1].output;
+        }
+        // Ugly as hell boilerplate
+        wires[6].input_pos.x = logic_gates[0].output_pos.x;
+        wires[6].input_pos.y = logic_gates[0].output_pos.y;
+        wires[6].output_pos.x = logic_gates[3].input1_pos.x;
+        wires[6].output_pos.y = logic_gates[3].input1_pos.y;
+        wires[7].input_pos.x = logic_gates[1].output_pos.x;
+        wires[7].input_pos.y = logic_gates[1].output_pos.y;
+        wires[7].output_pos.x = logic_gates[3].input2_pos.x;
+        wires[7].output_pos.y = logic_gates[3].input2_pos.y;
+
+        wires[8].input_pos.x = logic_gates[1].output_pos.x;
+        wires[8].input_pos.y = logic_gates[1].output_pos.y;
+        wires[8].output_pos.x = logic_gates[4].input1_pos.x;
+        wires[8].output_pos.y = logic_gates[4].input1_pos.y;
+        wires[9].input_pos.x = logic_gates[2].output_pos.x;
+        wires[9].input_pos.y = logic_gates[2].output_pos.y;
+        wires[9].output_pos.x = logic_gates[4].input2_pos.x;
+        wires[9].output_pos.y = logic_gates[4].input2_pos.y;
+
+        wires[10].input_pos.x = logic_gates[3].output_pos.x;
+        wires[10].input_pos.y = logic_gates[3].output_pos.y;
+        wires[10].output_pos.x = logic_gates[5].input1_pos.x;
+        wires[10].output_pos.y = logic_gates[5].input1_pos.y;
+        wires[11].input_pos.x = logic_gates[4].output_pos.x;
+        wires[11].input_pos.y = logic_gates[4].output_pos.y;
+        wires[11].output_pos.x = logic_gates[5].input2_pos.x;
+        wires[11].output_pos.y = logic_gates[5].input2_pos.y;
+
+        wires[12].input_pos.x = logic_gates[5].output_pos.x;
+        wires[12].input_pos.y = logic_gates[5].output_pos.y;
+        wires[12].output_pos.x = e_output.input_pos.x;
+        wires[12].output_pos.y = e_output.input_pos.y;
+
+        // DEBUG
+        asd = -10, wire_1 = -10, wire_2 = -10, wire_1_status = -10, wire_2_status = -10, lg_output = -10;
+
+        uninitialized = false;
     }
     // DEBUG
     if(IsKeyPressed(KEY_S)) electricity = !electricity;
@@ -377,172 +545,6 @@ bool draw_level_1(GameScreen *currentScreen) {
     if(switched_on) DrawText("ON", 500, 500, 50, BLACK);
     else DrawText("OFF", 500, 500, 50, BLACK);
 
-
-    // Drawing the electricity source rectangle
-    typedef struct E_Source{
-        Rectangle rec;
-        int output;
-        Vector2 output_pos;
-    } E_Source;
-
-    // The main inputs of the circuit
-    static E_Source e_sources[6];
-    for(int i = 0; i < 6; i++){
-        e_sources[i].rec = (Rectangle){
-            .x = 800.0f + (i * 200),
-            .y = 150.0f,
-            .width = 100.0f,
-            .height = 100.0f
-        };
-        e_sources[i].output = 0;
-        e_sources[i].output_pos = (Vector2){
-            .x = e_sources[i].rec.x + e_sources[i].rec.width/2,
-            .y = e_sources[i].rec.y + e_sources[i].rec.height
-        };
-    }
-
-    e_sources[0].output = 1;
-    e_sources[2].output = 1;
-    e_sources[3].output = 1;
-    e_sources[5].output = 1;
-
-
-    static LogicGates logic_gates[6];
-    // Initializing the logic gates placement rectangles
-    if(1){
-        for(int i = 0; i < 6; i++){
-            logic_gates[i] = (LogicGates){
-                .input1 = -1,
-                .input2 = -1,
-                .output = -1,
-                .rec = (Rectangle){
-                    .x = 800.0f,
-                    .y = 350.0f,
-                    .width = 100.0f,
-                    .height = 100.0f
-                },
-                .input1_pos.x = logic_gates[i].rec.x + logic_gates[i].rec.width/3,
-                .input1_pos.y = logic_gates[i].rec.y,
-                .input2_pos.x = logic_gates[i].rec.x + 2*logic_gates[i].rec.width/3,
-                .input2_pos.y = logic_gates[i].rec.y,
-                .output_pos.x = logic_gates[i].rec.x + logic_gates[i].rec.width/2,
-                .output_pos.y = logic_gates[i].rec.y + logic_gates[i].rec.height
-            };
-        }
-        logic_gates[0].rec.x = 900;
-        logic_gates[1].rec.x = 1300;
-        logic_gates[2].rec.x = 1700;
-        logic_gates[3].rec.x = 1100;
-        logic_gates[3].rec.y = 550;
-        logic_gates[4].rec.x = 1500;
-        logic_gates[4].rec.y = 550;
-        logic_gates[5].rec.x = 1300;
-        logic_gates[5].rec.y = 750;
-    }
-    // // Setting up logic_gates in/outputs 
-    // for(int i = 0; i < 6; i++){
-    //     logic_gates[i].input1_pos.x = logic_gates[i].rec.x + logic_gates[i].rec.width/3;
-    //     logic_gates[i].input1_pos.y = logic_gates[i].rec.y;
-    //     logic_gates[i].input2_pos.x = logic_gates[i].rec.x + 2*logic_gates[i].rec.width/3;
-    //     logic_gates[i].input2_pos.y = logic_gates[i].rec.y;
-    //     logic_gates[i].output_pos.x = logic_gates[i].rec.x + logic_gates[i].rec.width/2;
-    //     logic_gates[i].output_pos.y = logic_gates[i].rec.y + logic_gates[i].rec.height;
-    // }
-
-
-    // The main output of the circuit
-    typedef struct E_Output {
-        Rectangle rec;
-        int input;
-        Vector2 input_pos;
-        int output;
-        Vector2 output_pos;
-    } E_Output;
-
-    static E_Output e_output = {
-        .rec = (Rectangle){
-            .x = 500.0f,
-            .y = 1040.0f,
-            .width = 100.0f,
-            .height = 100.0f
-        },
-        .input = -1,
-        .output = -1,
-        .input_pos.x = 550.0f,
-        .input_pos.y = 1040.0f,
-        .output_pos.x = 550.0f,
-        .output_pos.y = 1090.0f
-    };
-
-
-    // Initializing the wires connecting the logic gates
-    typedef struct Wire {
-        int status;
-        Vector2 input_pos;
-        Vector2 output_pos;
-    } Wire;
-
-    static Wire wires[13];
-    for(int i = 0; i < 13; i++){
-        wires[i] = (Wire){
-            .status = -1,
-        };
-    }
-
-    // Connecting and setting up the status of the wires connecting the first row of logic gates
-    for(int i = 0; i < 6; i += 2) {
-        // Determine the index of the logic gate
-        int gate_index = i/2; 
-
-        // First wire of the pair
-        wires[i].input_pos.x = e_sources[i].output_pos.x;
-        wires[i].input_pos.y = e_sources[i].output_pos.y;
-        wires[i].output_pos.x = logic_gates[gate_index].input1_pos.x;
-        wires[i].output_pos.y = logic_gates[gate_index].input1_pos.y;
-        wires[i].status = e_sources[i].output;
-
-        // Second wire of the pair
-        wires[i+1].input_pos.x = e_sources[i+1].output_pos.x;
-        wires[i+1].input_pos.y = e_sources[i+1].output_pos.y;
-        wires[i+1].output_pos.x = logic_gates[gate_index].input2_pos.x;
-        wires[i+1].output_pos.y = logic_gates[gate_index].input2_pos.y;
-        wires[i+1].status = e_sources[i+1].output;
-    }
-
-    // Ugly as hell boilerplate
-    wires[6].input_pos.x = logic_gates[0].output_pos.x;
-    wires[6].input_pos.y = logic_gates[0].output_pos.y;
-    wires[6].output_pos.x = logic_gates[3].input1_pos.x;
-    wires[6].output_pos.y = logic_gates[3].input1_pos.y;
-    wires[7].input_pos.x = logic_gates[1].output_pos.x;
-    wires[7].input_pos.y = logic_gates[1].output_pos.y;
-    wires[7].output_pos.x = logic_gates[3].input2_pos.x;
-    wires[7].output_pos.y = logic_gates[3].input2_pos.y;
-
-    wires[8].input_pos.x = logic_gates[1].output_pos.x;
-    wires[8].input_pos.y = logic_gates[1].output_pos.y;
-    wires[8].output_pos.x = logic_gates[4].input1_pos.x;
-    wires[8].output_pos.y = logic_gates[4].input1_pos.y;
-    wires[9].input_pos.x = logic_gates[2].output_pos.x;
-    wires[9].input_pos.y = logic_gates[2].output_pos.y;
-    wires[9].output_pos.x = logic_gates[4].input2_pos.x;
-    wires[9].output_pos.y = logic_gates[4].input2_pos.y;
-
-    wires[10].input_pos.x = logic_gates[3].output_pos.x;
-    wires[10].input_pos.y = logic_gates[3].output_pos.y;
-    wires[10].output_pos.x = logic_gates[5].input1_pos.x;
-    wires[10].output_pos.y = logic_gates[5].input1_pos.y;
-    wires[11].input_pos.x = logic_gates[4].output_pos.x;
-    wires[11].input_pos.y = logic_gates[4].output_pos.y;
-    wires[11].output_pos.x = logic_gates[5].input2_pos.x;
-    wires[11].output_pos.y = logic_gates[5].input2_pos.y;
-
-    wires[12].input_pos.x = logic_gates[5].output_pos.x;
-    wires[12].input_pos.y = logic_gates[5].output_pos.y;
-    wires[12].output_pos.x = e_output.input_pos.x;
-    wires[12].output_pos.y = e_output.input_pos.y;
-
-
     // Draw the lever parts
     DrawTexturePro(lever_lever,
                     (Rectangle){0.0f, 0.0f, lever_lever.width, lever_lever.height},
@@ -557,27 +559,7 @@ bool draw_level_1(GameScreen *currentScreen) {
                     0.0f,
                     WHITE);
 
-    static Rectangle logic_gates_src = (Rectangle){
-        .x = 0.0f,
-        .y = 0.0f,
-        .width = 855.0f,
-        .height = 1295.0f
-    };
-    static Rectangle logic_gates_recs[6], logic_gates_recs_original[6];
-    if(!initialized){
-        for(int i = 0; i < 6; i++){
-            logic_gates_recs[i] = (Rectangle){
-                .x = 150.0f * i + 50,
-                .y = 10.0f,
-                .width = 80.0f,
-                .height = 100.0f
-            };
-            logic_gates_recs_original[i] = logic_gates_recs[i];
-        }
-        initialized = true;
-    }
-    // DEBUG
-    int asd = 0;
+
     int moved_gate_index = -1;
     Vector2 pos = GetMousePosition();
     if(IsMouseButtonDown(MOUSE_BUTTON_LEFT)) DrawText(TextFormat("%.0f, %.0f", pos.x, pos.y), 600, 600, 60, BLACK);
@@ -592,15 +574,20 @@ bool draw_level_1(GameScreen *currentScreen) {
         }
     } else if (IsMouseButtonReleased(MOUSE_LEFT_BUTTON)){
         for (int i = 0; i < 6; i++) {
-        bool gate_moved = false;
+            bool gate_moved = false;
             for (int j = 0; j < 6; j++) {
                 moved_gate_index = j;
                 // Check if any logic gate collides with any logic gates placeholder
-                if (CheckCollisionRecs(logic_gates_recs[i], logic_gates[j].rec)) {
+                if(CheckCollisionRecs(logic_gates_recs[i], logic_gates[j].rec)) {
                     logic_gates_recs[i] = logic_gates[j].rec;
                     gate_moved = true;
                     moved_gate_index = -1;
-                    change_logic_values(&logic_gates[j], i);
+                    wire_1 = 2*j;
+                    wire_2 = 2*j+1;
+                    wire_1_status = wires[wire_1].status;
+                    wire_2_status = wires[wire_2].status;
+                    lg_output = logic_gates[j].output;
+                    change_logic_values(&logic_gates[j], j, i, wires);
                     asd = logic_gates[j].output;
                     break;
                 }
@@ -613,7 +600,7 @@ bool draw_level_1(GameScreen *currentScreen) {
         }
     }
     // DEBUG
-    DrawText(TextFormat("%d", asd), 0, 0, 50, BLACK);
+    DrawText(TextFormat("%d, wire1: %d, wire2: %d\n\n\nwire1_status: %d, wire2_status: %d, lg_output: %d", asd, wire_1, wire_2, wire_1_status, wire_2_status, lg_output), 0, 0, 50, BLACK);
 
     // Draw the wires
     for(int i = 0; i < 13; i++){
@@ -639,7 +626,7 @@ bool draw_level_1(GameScreen *currentScreen) {
             DrawRectanglePro(logic_gates[i].rec, (Vector2){.x=0.0f, .y=0.0f}, 0.0f, DARKGREEN);
         else if(logic_gates[i].output == 1)
             DrawRectanglePro(logic_gates[i].rec, (Vector2){.x=0.0f, .y=0.0f}, 0.0f, GREEN);
-        else 
+        else if(logic_gates[i].output == -1)
             DrawRectanglePro(logic_gates[i].rec, (Vector2){.x=0.0f, .y=0.0f}, 0.0f, RED);
     }
 
@@ -647,7 +634,7 @@ bool draw_level_1(GameScreen *currentScreen) {
         DrawRectanglePro(e_output.rec, (Vector2){.x=0.0f, .y=0.0f}, 0.0f, GRAY);
     else if(e_output.output == 1) 
         DrawRectanglePro(e_output.rec, (Vector2){.x=0.0f, .y=0.0f}, 0.0f, GREEN);
-    else 
+    else if(e_output.output == -1)
         DrawRectanglePro(e_output.rec, (Vector2){.x=0.0f, .y=0.0f}, 0.0f, RED);
 
     // Draw the logic gates 
@@ -669,13 +656,13 @@ bool draw_level_1(GameScreen *currentScreen) {
     }
 }
 
-void change_logic_values(LogicGates *logic_gate, int logic_value){
+void change_logic_values(LogicGates *logic_gate, int index, int logic_value, Wire *wires){
     switch (logic_value)
     {
     case AND:
-        if(logic_gate->input1 == 1 && logic_gate->input2 == 1) logic_gate->output = 1;
-        else if(logic_gate->input1 == -1 || logic_gate->input2 == -1) logic_gate->output = -1;
-        else logic_gate->output = 0;
+        if(wires[2*index].status == 1 && wires[2*index+1].status == 1) logic_gate->output = 1;
+        else if(wires[2*index].status == -1 || wires[2*index+1].status == -1) logic_gate->output = -1;
+        else if(wires[2*index].status == 0 || wires[2*index+1].status == 0)logic_gate->output = 0;
         break;
     
     default:
