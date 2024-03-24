@@ -3,12 +3,12 @@
 #include "src/raygui.h"
 #include <math.h>
 
-#define AND 1
-#define OR 2
-#define NAND 3
-#define NOR 4
-#define XOR 5
-#define XNOR 6
+#define AND 0
+#define OR 1
+#define NAND 2
+#define NOR 3
+#define XOR 4
+#define XNOR 5
 
 //------------------------------------------------------------------------------------------
 // Types and Structures Definition
