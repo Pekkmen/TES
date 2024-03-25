@@ -485,15 +485,20 @@ bool draw_level_1(GameScreen *currentScreen) {
 
         uninitialized = false;
     }
+    // Updating the status of the wires
     wires[6].status = logic_gates[0].output;
     wires[7].status = logic_gates[1].output;
     wires[8].status = logic_gates[1].output;
     wires[9].status = logic_gates[2].output;
     wires[10].status = logic_gates[3].output;
     wires[11].status = logic_gates[4].output;
-    wires[12].status = e_output.output;
+    wires[12].status = logic_gates[5].output;
     // DEBUG
     if(IsKeyPressed(KEY_S)) electricity = !electricity;
+
+    if(wires[12].status == 1){
+        electricity = true;
+    }
 
     Vector2 lever_lever_size = (Vector2){lever_lever.width, lever_lever.height};
     Vector2 lever_bottom_size = (Vector2){lever_bottom.width, lever_bottom.height};
@@ -533,7 +538,7 @@ bool draw_level_1(GameScreen *currentScreen) {
 
     static float rotation = 45.0f, d_rotation = 0.0f;
     float mouse_pos_x_pressed;
-    // Check fif the left mouse button was pressed inside the rectangle of the lever
+    // Check if the left mouse button was pressed inside the rectangle of the lever
     if(electricity && (MOUSE_BUTTON_LEFT) && CheckCollisionPointRec(GetMousePosition(), unshifted_lever_rec)){
         mouse_pos_x_pressed = GetMousePosition().x;
     } else if(electricity && IsMouseButtonDown(MOUSE_BUTTON_LEFT) && CheckCollisionPointRec(GetMousePosition(), unshifted_lever_rec)){
@@ -571,6 +576,7 @@ bool draw_level_1(GameScreen *currentScreen) {
     int moved_gate_index = -1;
     Vector2 pos = GetMousePosition();
     if(IsMouseButtonDown(MOUSE_BUTTON_LEFT)) DrawText(TextFormat("%.0f, %.0f", pos.x, pos.y), 600, 600, 60, BLACK);
+    int clicked_gate_index = -1;
     // Check for clicks on the logic gates
     if(IsMouseButtonDown(MOUSE_BUTTON_LEFT)){
         for(int i = 0; i < 6; i++){
@@ -674,8 +680,8 @@ void change_logic_values(LogicGates *logic_gate, int index, int logic_value, Wir
         break;
 
     case OR:
-        if(wires[2*index].status == 1 || wires[2*index+1].status == 1) logic_gate->output = 1;
-        else if(wires[2*index].status == -1 || wires[2*index+1].status == -1) logic_gate->output = -1;
+        if(wires[2*index].status == -1 || wires[2*index+1].status == -1) logic_gate->output = -1;
+        else if(wires[2*index].status == 1 || wires[2*index+1].status == 1) logic_gate->output = 1;
         else if(wires[2*index].status == 0 && wires[2*index+1].status == 0)logic_gate->output = 0;
         break;
 
@@ -686,8 +692,8 @@ void change_logic_values(LogicGates *logic_gate, int index, int logic_value, Wir
         break;
 
     case NOR:
-        if(wires[2*index].status == 1 || wires[2*index+1].status == 1) logic_gate->output = 0;
-        else if(wires[2*index].status == -1 || wires[2*index+1].status == -1) logic_gate->output = -1;
+        if(wires[2*index].status == -1 || wires[2*index+1].status == -1) logic_gate->output = -1;
+        else if(wires[2*index].status == 1 || wires[2*index+1].status == 1) logic_gate->output = 0;
         else if(wires[2*index].status == 0 && wires[2*index+1].status == 0)logic_gate->output = 1;
         break;
 
@@ -709,5 +715,5 @@ void change_logic_values(LogicGates *logic_gate, int index, int logic_value, Wir
 }
 
 void reset_logic_value(LogicGates *logic_gate){
-    logic_gate->output = -1;
+    //logic_gate->output = -1;
 }
