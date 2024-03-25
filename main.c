@@ -664,6 +664,36 @@ void change_logic_values(LogicGates *logic_gate, int index, int logic_value, Wir
         else if(wires[2*index].status == -1 || wires[2*index+1].status == -1) logic_gate->output = -1;
         else if(wires[2*index].status == 0 || wires[2*index+1].status == 0)logic_gate->output = 0;
         break;
+
+    case OR:
+        if(wires[2*index].status == 1 || wires[2*index+1].status == 1) logic_gate->output = 1;
+        else if(wires[2*index].status == -1 || wires[2*index+1].status == -1) logic_gate->output = -1;
+        else if(wires[2*index].status == 0 && wires[2*index+1].status == 0)logic_gate->output = 0;
+        break;
+
+    case NAND:
+        if(wires[2*index].status == 1 && wires[2*index+1].status == 1) logic_gate->output = 0;
+        else if(wires[2*index].status == -1 || wires[2*index+1].status == -1) logic_gate->output = -1;
+        else if(wires[2*index].status == 0 || wires[2*index+1].status == 0)logic_gate->output = 1;
+        break;
+
+    case NOR:
+        if(wires[2*index].status == 1 || wires[2*index+1].status == 1) logic_gate->output = 0;
+        else if(wires[2*index].status == -1 || wires[2*index+1].status == -1) logic_gate->output = -1;
+        else if(wires[2*index].status == 0 && wires[2*index+1].status == 0)logic_gate->output = 1;
+        break;
+
+    case XOR:
+        if(wires[2*index].status == -1 || wires[2*index+1].status == -1) logic_gate->output = -1;
+        else if(wires[2*index].status == wires[2*index+1].status) logic_gate->output = 0;
+        else logic_gate->output = 1;
+        break;
+
+    case XNOR:
+        if(wires[2*index].status == -1 || wires[2*index+1].status == -1) logic_gate->output = -1;
+        else if(wires[2*index].status == wires[2*index+1].status) logic_gate->output = 1;
+        else logic_gate->output = 0;
+        break;
     
     default:
         break;
