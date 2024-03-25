@@ -455,6 +455,7 @@ bool draw_level_1(GameScreen *currentScreen) {
         wires[7].input_pos.y = logic_gates[1].output_pos.y;
         wires[7].output_pos.x = logic_gates[3].input2_pos.x;
         wires[7].output_pos.y = logic_gates[3].input2_pos.y;
+        
 
         wires[8].input_pos.x = logic_gates[1].output_pos.x;
         wires[8].input_pos.y = logic_gates[1].output_pos.y;
@@ -484,6 +485,13 @@ bool draw_level_1(GameScreen *currentScreen) {
 
         uninitialized = false;
     }
+    wires[6].status = logic_gates[0].output;
+    wires[7].status = logic_gates[1].output;
+    wires[8].status = logic_gates[1].output;
+    wires[9].status = logic_gates[2].output;
+    wires[10].status = logic_gates[3].output;
+    wires[11].status = logic_gates[4].output;
+    wires[12].status = e_output.output;
     // DEBUG
     if(IsKeyPressed(KEY_S)) electricity = !electricity;
 
@@ -577,8 +585,8 @@ bool draw_level_1(GameScreen *currentScreen) {
             bool gate_moved = false;
             for (int j = 0; j < 6; j++) {
                 moved_gate_index = j;
-                // Check if any logic gate collides with any logic gates placeholder
-                if(CheckCollisionRecs(logic_gates_recs[i], logic_gates[j].rec)) {
+                // Check if any logic gate collides with any logic gate placeholder and check that the actual placeholder is free
+                if(CheckCollisionRecs(logic_gates_recs[i], logic_gates[j].rec) && logic_gates[j].output == -1) {
                     logic_gates_recs[i] = logic_gates[j].rec;
                     gate_moved = true;
                     moved_gate_index = -1;
@@ -701,5 +709,5 @@ void change_logic_values(LogicGates *logic_gate, int index, int logic_value, Wir
 }
 
 void reset_logic_value(LogicGates *logic_gate){
-    // logic_gate->output = -1;
+    logic_gate->output = -1;
 }
