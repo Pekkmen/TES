@@ -33,7 +33,6 @@ void draw_level_buttons(GameScreen*, int, bool *);
 bool draw_exit_button(GameScreen *);
 bool draw_level_1(GameScreen *);
 void change_logic_values(LogicGates *, int, int, Wire *);
-void reset_logic_value(LogicGates  *);
 
 //------------------------------------------------------------------------------------
 // Program main entry point
@@ -323,7 +322,7 @@ bool draw_level_1(GameScreen *currentScreen) {
     static bool textures_loaded = false;
     static bool uninitialized = true;
     static bool electricity = false, switched_on = false;
-    static Texture2D lever_lever, lever_bottom, display_off, display_on, lg[6];
+    static Texture2D lever_lever, lever_bottom, display_off, display_on, lg[6], level_1_background;
     // The main inputs of the circuit
     static E_Source e_sources[6];
     static LogicGates logic_gates[6];
@@ -354,6 +353,7 @@ bool draw_level_1(GameScreen *currentScreen) {
 
     // Loading textures
     if(!textures_loaded){
+        level_1_background = LoadTexture("assets/level_1/level_1_background.png");
         lever_lever = LoadTexture("assets/level_1/lever_lever.png");
         lever_bottom = LoadTexture("assets/level_1/lever_bottom.png");
         display_off = LoadTexture("assets/level_1/on_off_display_OFF.png");
@@ -498,6 +498,8 @@ bool draw_level_1(GameScreen *currentScreen) {
 
     if(wires[12].status == 1){
         electricity = true;
+    } else {
+        electricity = false;
     }
 
     Vector2 lever_lever_size = (Vector2){lever_lever.width, lever_lever.height};
@@ -525,8 +527,6 @@ bool draw_level_1(GameScreen *currentScreen) {
         .height = display_on.height * 0.8
     };
 
-    if(electricity) DrawTexturePro(display_on, display_src, display_rec, (Vector2){.x=0, .y=0}, 0.0f, WHITE);
-    else DrawTexturePro(display_off, display_src, display_rec, (Vector2){.x=0, .y=0}, 0.0f, WHITE);
 
     // I think changing the origin point shifts the entire rectangle away, so and unshifted version should be used for detecting clicks on the lever
     Rectangle unshifted_lever_rec = (Rectangle){
@@ -554,67 +554,60 @@ bool draw_level_1(GameScreen *currentScreen) {
 
     if(rotation <= -44.0f) switched_on = true;
     else switched_on = false;
-    // DEBUG
-    if(switched_on) DrawText("ON", 500, 500, 50, BLACK);
-    else DrawText("OFF", 500, 500, 50, BLACK);
 
-    // Draw the lever parts
-    DrawTexturePro(lever_lever,
-                    (Rectangle){0.0f, 0.0f, lever_lever.width, lever_lever.height},
-                    level_level_rec,
-                    (Vector2){260.0f, 331.0f},
-                    rotation,
-                    WHITE);
-    DrawTexturePro(lever_bottom,
-                    (Rectangle){0.0f, 0.0f, lever_bottom.width, lever_bottom.height},
-                    (Rectangle){100.0f + 260.0f, GetScreenHeight() - lever_bottom_size.y + 331.0f, lever_bottom_size.x, lever_bottom_size.y},
-                    (Vector2){260.0f, 331.0f},
-                    0.0f,
-                    WHITE);
-
-
-    int moved_gate_index = -1;
     Vector2 pos = GetMousePosition();
     if(IsMouseButtonDown(MOUSE_BUTTON_LEFT)) DrawText(TextFormat("%.0f, %.0f", pos.x, pos.y), 600, 600, 60, BLACK);
-    int clicked_gate_index = -1;
+    static int clicked_gate_index = -1;
     // Check for clicks on the logic gates
     if(IsMouseButtonDown(MOUSE_BUTTON_LEFT)){
         for(int i = 0; i < 6; i++){
             if(CheckCollisionPointRec(pos, logic_gates_recs[i])){
-                logic_gates_recs[i].x = pos.x - 30;
-                logic_gates_recs[i].y = pos.y - 30;
+                clicked_gate_index = i;
+                logic_gates_recs[clicked_gate_index].x = pos.x - 30;
+                logic_gates_recs[clicked_gate_index].y = pos.y - 30;
                 break;
             }
         }
-    } else if (IsMouseButtonReleased(MOUSE_LEFT_BUTTON)){
-        for (int i = 0; i < 6; i++) {
-            bool gate_moved = false;
-            for (int j = 0; j < 6; j++) {
-                moved_gate_index = j;
-                // Check if any logic gate collides with any logic gate placeholder and check that the actual placeholder is free
-                if(CheckCollisionRecs(logic_gates_recs[i], logic_gates[j].rec) && logic_gates[j].output == -1) {
-                    logic_gates_recs[i] = logic_gates[j].rec;
-                    gate_moved = true;
-                    moved_gate_index = -1;
-                    wire_1 = 2*j;
-                    wire_2 = 2*j+1;
-                    wire_1_status = wires[wire_1].status;
-                    wire_2_status = wires[wire_2].status;
-                    lg_output = logic_gates[j].output;
-                    change_logic_values(&logic_gates[j], j, i, wires);
-                    asd = logic_gates[j].output;
-                    break;
-                }
+    }
+    // If a logic gate was placed to a placeholder, the index will be the index of the logic gate, and the value on that index will be the index of the placeholder
+    static int placed_lg[6] = {-1};
+    if(IsMouseButtonReleased(MOUSE_LEFT_BUTTON) && clicked_gate_index != -1){
+        for (int j = 0; j < 6; j++) {
+            // Check if any logic gate collides with any logic gate placeholder and check that the actual placeholder is free
+            if(CheckCollisionRecs(logic_gates_recs[clicked_gate_index], logic_gates[j].rec)/* && logic_gates[j].output == -1*/) {
+                logic_gates_recs[clicked_gate_index].x = logic_gates[j].rec.x + 10.0f;
+                logic_gates_recs[clicked_gate_index].y = logic_gates[j].rec.y + 2.0f;
+                wire_1 = 2*j;
+                wire_2 = 2*j+1;
+                placed_lg[clicked_gate_index] = j;
+                wire_1_status = wires[wire_1].status;
+                wire_2_status = wires[wire_2].status;
+                lg_output = logic_gates[j].output;
+                change_logic_values(&logic_gates[j], j, clicked_gate_index, wires);
+                clicked_gate_index = -1;
+                asd = logic_gates[j].output;
+                break;
             }
+        }
+        if(clicked_gate_index != -1) {
             // If not, place it back to its original position
-            if(!gate_moved && moved_gate_index != -1){
-                reset_logic_value(&logic_gates[moved_gate_index]);
-                logic_gates_recs[i] = logic_gates_recs_original[i];
-            } 
+            logic_gates_recs[clicked_gate_index].x = logic_gates_recs_original[clicked_gate_index].x;
+            logic_gates_recs[clicked_gate_index].y = logic_gates_recs_original[clicked_gate_index].y;
+            if(placed_lg[clicked_gate_index] != -1){
+                // If the give logic gates was placed on a placeholder, change the placeholder's value back to -1
+                logic_gates[placed_lg[clicked_gate_index]].output = -1;
+            }
+            clicked_gate_index = -1;
         }
     }
+    DrawTexture(level_1_background, 0, 0, WHITE);
+
+    if(electricity) DrawTexturePro(display_on, display_src, display_rec, (Vector2){.x=0, .y=0}, 0.0f, WHITE);
+    else DrawTexturePro(display_off, display_src, display_rec, (Vector2){.x=0, .y=0}, 0.0f, WHITE);
+
     // DEBUG
-    DrawText(TextFormat("%d, wire1: %d, wire2: %d\n\n\nwire1_status: %d, wire2_status: %d, lg_output: %d", asd, wire_1, wire_2, wire_1_status, wire_2_status, lg_output), 0, 0, 50, BLACK);
+    // DrawText(TextFormat("%d, wire1: %d, wire2: %d\n\n\nwire1_status: %d, wire2_status: %d, lg_output: %d", asd, wire_1, wire_2, wire_1_status, wire_2_status, lg_output), 0, 0, 50, BLACK);
+    // DrawText(TextFormat("clicked_gate_index: %d", clicked_gate_index), 500, 650, 50, BLACK);
 
     // Draw the wires
     for(int i = 0; i < 13; i++){
@@ -656,8 +649,23 @@ bool draw_level_1(GameScreen *currentScreen) {
         DrawTexturePro(lg[i], logic_gates_src, logic_gates_recs[i], (Vector2){.x=0,.y=0}, 0, WHITE);
     }
 
+    // Draw the lever parts
+    DrawTexturePro(lever_lever,
+                    (Rectangle){0.0f, 0.0f, lever_lever.width, lever_lever.height},
+                    level_level_rec,
+                    (Vector2){260.0f, 331.0f},
+                    rotation,
+                    WHITE);
+    DrawTexturePro(lever_bottom,
+                    (Rectangle){0.0f, 0.0f, lever_bottom.width, lever_bottom.height},
+                    (Rectangle){100.0f + 260.0f, GetScreenHeight() - lever_bottom_size.y + 331.0f, lever_bottom_size.x, lever_bottom_size.y},
+                    (Vector2){260.0f, 331.0f},
+                    0.0f,
+                    WHITE);
+
     // If the user has clicked on the Menu button, unload the textures
     if(draw_exit_button(currentScreen)){
+        UnloadTexture(level_1_background);
         UnloadTexture(lever_lever);
         UnloadTexture(lever_bottom);
         UnloadTexture(display_off);
@@ -712,8 +720,4 @@ void change_logic_values(LogicGates *logic_gate, int index, int logic_value, Wir
     default:
         break;
     }
-}
-
-void reset_logic_value(LogicGates *logic_gate){
-    //logic_gate->output = -1;
 }
